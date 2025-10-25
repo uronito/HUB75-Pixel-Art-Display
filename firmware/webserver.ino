@@ -257,11 +257,19 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
       if (!request->hasParam("dir", true)) {
         logmessage += " ERROR: Missing 'dir' parameter";
         Serial.println(logmessage);
-        request->send(400, "text/plain", "Missing 'dir' parameter.");
+        request->send(400, "text/plain", "Missing 'dir' parameter");
         return;
       }
       
       String dirName = request->getParam("dir", true)->value();
+      
+      // Validate directory name to prevent path traversal
+      if (dirName.indexOf("..") != -1) {
+        logmessage += " ERROR: Invalid directory name";
+        Serial.println(logmessage);
+        request->send(400, "text/plain", "Invalid directory name");
+        return;
+      }
       
       // Ensure directory path starts with /
       if (!dirName.startsWith("/")) {
@@ -274,11 +282,11 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
       if (LittleFS.mkdir(dirName)) {
         logmessage += " SUCCESS";
         Serial.println(logmessage);
-        request->send(200, "text/plain", "Directory created: " + dirName);
+        request->send(200, "text/plain", "Directory created successfully");
       } else {
         logmessage += " FAILED";
         Serial.println(logmessage);
-        request->send(500, "text/plain", "Failed to create directory: " + dirName);
+        request->send(500, "text/plain", "Failed to create directory");
       }
     } else {
       logmessage += " Auth: Failed";
