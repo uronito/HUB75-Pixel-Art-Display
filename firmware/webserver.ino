@@ -265,7 +265,22 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
         dirName = "/" + dirName;
       }
 
+      // Validate directory name - prevent path traversal and empty names
+      if (dirName.indexOf("..") >= 0 || dirName.length() <= 1) {
+        Serial.println(logmessage + " ERROR: invalid directory name");
+        request->send(400, "text/plain", "ERROR: invalid directory name");
+        return;
+      }
+
       logmessage += " dir=" + dirName;
+
+      // Check if directory already exists
+      if (LittleFS.exists(dirName)) {
+        logmessage += " ERROR: directory already exists";
+        Serial.println(logmessage);
+        request->send(400, "text/plain", "ERROR: directory already exists: " + dirName);
+        return;
+      }
 
       if (LittleFS.mkdir(dirName)) {
         logmessage += " directory created";
