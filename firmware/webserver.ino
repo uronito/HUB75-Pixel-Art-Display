@@ -245,6 +245,55 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
       return request->requestAuthentication();
     }
   });
+
+  server->on("/mkdir", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+    if (checkUserWebAuth(request)) {
+      logmessage += " Auth: Success";
+      Serial.println(logmessage);
+
+      if (!request->hasParam("dir", true)) {
+        request->send(400, "text/plain", "Missing 'dir' parameter");
+        return;
+      }
+
+      String dirName = request->getParam("dir", true)->value();
+      
+      // Validate directory name for security - check for path traversal
+      if (dirName.indexOf("..") != -1) {
+        request->send(400, "text/plain", "Invalid directory name: path traversal not allowed");
+        return;
+      }
+      
+      // Ensure directory path starts with /
+      if (!dirName.startsWith("/")) {
+        dirName = "/" + dirName;
+      }
+
+      // Check if path already exists
+      if (LittleFS.exists(dirName)) {
+        request->send(400, "text/plain", "Path already exists: " + dirName);
+        return;
+      }
+
+      logmessage = "Client:" + request->client()->remoteIP().toString() + " attempting to create directory: " + dirName;
+      Serial.println(logmessage);
+
+      if (LittleFS.mkdir(dirName)) {
+        logmessage = "Directory created successfully: " + dirName;
+        Serial.println(logmessage);
+        request->send(200, "text/plain", "Directory created: " + dirName);
+      } else {
+        logmessage = "Failed to create directory: " + dirName;
+        Serial.println(logmessage);
+        request->send(500, "text/plain", "Failed to create directory: " + dirName);
+      }
+    } else {
+      logmessage += " Auth: Failed";
+      Serial.println(logmessage);
+      return request->requestAuthentication();
+    }
+  });
 }
 
 void notFound(AsyncWebServerRequest *request) {
