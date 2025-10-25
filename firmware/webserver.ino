@@ -259,8 +259,8 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
 
       String dirName = request->getParam("dir", true)->value();
       
-      // Validate directory name for security
-      if (dirName.indexOf("..") != -1 || dirName.indexOf('\0') != -1) {
+      // Validate directory name for security - check for path traversal
+      if (dirName.indexOf("..") != -1) {
         request->send(400, "text/plain", "Invalid directory name: path traversal not allowed");
         return;
       }
@@ -270,9 +270,9 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
         dirName = "/" + dirName;
       }
 
-      // Check if directory already exists
+      // Check if path already exists
       if (LittleFS.exists(dirName)) {
-        request->send(400, "text/plain", "Directory or file already exists: " + dirName);
+        request->send(400, "text/plain", "Path already exists: " + dirName);
         return;
       }
 
