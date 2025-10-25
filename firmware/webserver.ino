@@ -260,15 +260,33 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
 
       String dirName = request->getParam("dir", true)->value();
       
+      // Trim whitespace
+      dirName.trim();
+      
+      // Check for empty parameter
+      if (dirName.length() == 0) {
+        Serial.println(logmessage + " ERROR: empty directory name");
+        request->send(400, "text/plain", "ERROR: empty directory name");
+        return;
+      }
+      
       // Add leading slash if not present
       if (!dirName.startsWith("/")) {
         dirName = "/" + dirName;
       }
 
-      // Validate directory name - prevent path traversal and empty names
-      if (dirName.indexOf("..") >= 0 || dirName.length() <= 1) {
-        Serial.println(logmessage + " ERROR: invalid directory name");
+      // Validate directory name - prevent path traversal
+      // Check for ".." to prevent directory traversal attacks
+      if (dirName.indexOf("..") >= 0) {
+        Serial.println(logmessage + " ERROR: invalid directory name - path traversal not allowed");
         request->send(400, "text/plain", "ERROR: invalid directory name");
+        return;
+      }
+      
+      // Reject root directory creation
+      if (dirName == "/") {
+        Serial.println(logmessage + " ERROR: cannot create root directory");
+        request->send(400, "text/plain", "ERROR: cannot create root directory");
         return;
       }
 
