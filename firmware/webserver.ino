@@ -245,6 +245,67 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
       return request->requestAuthentication();
     }
   });
+
+  server->on("/mkdir", HTTP_POST, [](AsyncWebServerRequest * request) {
+    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+    
+    if (checkUserWebAuth(request)) {
+      logmessage += " Auth: Success";
+      Serial.println(logmessage);
+
+      if (request->hasParam("dir", true)) {
+        String dirName = request->getParam("dir", true)->value();
+        
+        // Validate directory name
+        if (dirName.isEmpty()) {
+          logmessage = "Client:" + request->client()->remoteIP().toString() + " ERROR: directory name is empty";
+          Serial.println(logmessage);
+          request->send(400, "text/plain", "ERROR: directory name cannot be empty");
+          return;
+        }
+        
+        // Prevent directory traversal and absolute paths
+        if (dirName.indexOf("..") != -1) {
+          logmessage = "Client:" + request->client()->remoteIP().toString() + " ERROR: invalid directory name (contains ..)";
+          Serial.println(logmessage);
+          request->send(400, "text/plain", "ERROR: invalid directory name");
+          return;
+        }
+        
+        // Ensure directory name starts with /
+        if (!dirName.startsWith("/")) {
+          dirName = "/" + dirName;
+        }
+        
+        // Check if directory already exists
+        if (LittleFS.exists(dirName)) {
+          logmessage = "Client:" + request->client()->remoteIP().toString() + " ERROR: directory already exists: " + dirName;
+          Serial.println(logmessage);
+          request->send(409, "text/plain", "ERROR: directory already exists");
+          return;
+        }
+        
+        // Attempt to create the directory
+        if (LittleFS.mkdir(dirName)) {
+          logmessage = "Client:" + request->client()->remoteIP().toString() + " SUCCESS: created directory: " + dirName;
+          Serial.println(logmessage);
+          request->send(200, "text/plain", "Directory created: " + dirName);
+        } else {
+          logmessage = "Client:" + request->client()->remoteIP().toString() + " ERROR: failed to create directory: " + dirName;
+          Serial.println(logmessage);
+          request->send(500, "text/plain", "ERROR: failed to create directory");
+        }
+      } else {
+        logmessage = "Client:" + request->client()->remoteIP().toString() + " ERROR: dir parameter required";
+        Serial.println(logmessage);
+        request->send(400, "text/plain", "ERROR: dir parameter required");
+      }
+    } else {
+      logmessage += " Auth: Failed";
+      Serial.println(logmessage);
+      return request->requestAuthentication();
+    }
+  });
 }
 
 void notFound(AsyncWebServerRequest *request) {
