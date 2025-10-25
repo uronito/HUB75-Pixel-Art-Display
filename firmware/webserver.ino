@@ -277,11 +277,11 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
           dirName = "/" + dirName;
         }
         
-        // Check if directory already exists
+        // Check if path already exists (file or directory)
         if (LittleFS.exists(dirName)) {
-          logmessage = "Client:" + request->client()->remoteIP().toString() + " ERROR: directory already exists: " + dirName;
+          logmessage = "Client:" + request->client()->remoteIP().toString() + " ERROR: path already exists: " + dirName;
           Serial.println(logmessage);
-          request->send(409, "text/plain", "ERROR: directory already exists");
+          request->send(409, "text/plain", "ERROR: path already exists");
           return;
         }
         
