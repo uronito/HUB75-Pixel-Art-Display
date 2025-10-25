@@ -245,6 +245,76 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
       return request->requestAuthentication();
     }
   });
+
+  server->on("/mkdir", HTTP_POST, [](AsyncWebServerRequest * request) {
+    String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+    if (checkUserWebAuth(request)) {
+      logmessage += " Auth: Success";
+      Serial.println(logmessage);
+
+      if (!request->hasParam("dir", true)) {
+        Serial.println(logmessage + " ERROR: missing 'dir' parameter");
+        request->send(400, "text/plain", "ERROR: missing 'dir' parameter");
+        return;
+      }
+
+      String dirName = request->getParam("dir", true)->value();
+      
+      // Trim whitespace
+      dirName.trim();
+      
+      // Check for empty parameter
+      if (dirName.length() == 0) {
+        Serial.println(logmessage + " ERROR: empty directory name");
+        request->send(400, "text/plain", "ERROR: empty directory name");
+        return;
+      }
+      
+      // Add leading slash if not present
+      if (!dirName.startsWith("/")) {
+        dirName = "/" + dirName;
+      }
+
+      // Validate directory name - prevent path traversal
+      // Check for ".." to prevent directory traversal attacks
+      if (dirName.indexOf("..") >= 0) {
+        Serial.println(logmessage + " ERROR: invalid directory name - path traversal not allowed");
+        request->send(400, "text/plain", "ERROR: path traversal not allowed");
+        return;
+      }
+      
+      // Reject root directory creation
+      if (dirName == "/") {
+        Serial.println(logmessage + " ERROR: cannot create root directory");
+        request->send(400, "text/plain", "ERROR: cannot create root directory");
+        return;
+      }
+
+      logmessage += " dir=" + dirName;
+
+      // Check if directory already exists
+      if (LittleFS.exists(dirName)) {
+        logmessage += " ERROR: directory already exists";
+        Serial.println(logmessage);
+        request->send(400, "text/plain", "ERROR: directory already exists: " + dirName);
+        return;
+      }
+
+      if (LittleFS.mkdir(dirName)) {
+        logmessage += " directory created";
+        Serial.println(logmessage);
+        request->send(200, "text/plain", "Directory created: " + dirName);
+      } else {
+        logmessage += " ERROR: failed to create directory";
+        Serial.println(logmessage);
+        request->send(500, "text/plain", "ERROR: failed to create directory: " + dirName);
+      }
+    } else {
+      logmessage += " Auth: Failed";
+      Serial.println(logmessage);
+      return request->requestAuthentication();
+    }
+  });
 }
 
 void notFound(AsyncWebServerRequest *request) {
