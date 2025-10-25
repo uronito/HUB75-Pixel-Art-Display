@@ -279,7 +279,7 @@ server->on("/toggleScrollText", HTTP_GET, [](AsyncWebServerRequest *request) {
       // Check for ".." to prevent directory traversal attacks
       if (dirName.indexOf("..") >= 0) {
         Serial.println(logmessage + " ERROR: invalid directory name - path traversal not allowed");
-        request->send(400, "text/plain", "ERROR: invalid directory name");
+        request->send(400, "text/plain", "ERROR: path traversal not allowed");
         return;
       }
       
